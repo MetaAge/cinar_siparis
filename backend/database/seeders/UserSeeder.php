@@ -15,6 +15,30 @@ class UserSeeder extends Seeder
             'password' => Hash::make('123456'),
             'role' => 'cashier',
         ]);
+	User::create([
+            'name' => 'Yağmur',
+            'email' => 'yağmur@cinar.com',
+            'password' => Hash::make('123456'),
+            'role' => 'cashier',
+        ]);
+	User::create([
+            'name' => 'Selma',
+            'email' => 'selma@cinar.com',
+            'password' => Hash::make('123456'),
+            'role' => 'cashier',
+        ]);
+	User::create([
+            'name' => 'Ceyda',
+            'email' => 'ceyda@cinar.com',
+            'password' => Hash::make('123456'),
+            'role' => 'cashier',
+        ]);
+	User::create([
+            'name' => 'Cahit',
+            'email' => 'cahit@cinar.com',
+            'password' => Hash::make('123456'),
+            'role' => 'production',
+        ]);
 
         User::create([
             'name' => 'İmalat',

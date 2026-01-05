@@ -66,7 +66,7 @@ class CashierOrderController extends Controller
     public function uploadImage(Request $request)
     {
         $request->validate([
-            'image' => 'required|file|mimes:jpg,jpeg,png,webp|max:5120',
+            'image' => 'required|file|mimes:jpg,jpeg,png,webp|max:20480',
         ]);
 
         $path = $request->file('image')->store('orders', 'public');

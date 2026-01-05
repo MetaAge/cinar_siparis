@@ -3,13 +3,13 @@
 return [
     'paths' => [
         'api/*',
-        'storage/*',   // 🔥 BU SATIR ŞART
+        'storage/*',
     ],
 
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
-        'http://localhost:52736', // Flutter Web
+        'https://siparis.cinarpastaneleri.com',
     ],
 
     'allowed_headers' => ['*'],
