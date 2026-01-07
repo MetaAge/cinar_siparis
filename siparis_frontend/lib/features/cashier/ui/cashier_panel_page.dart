@@ -289,19 +289,19 @@ class _CashierPanelPageState extends ConsumerState<CashierPanelPage> {
 
             final matchAdvanced =
                 (_nameCtrl.text.trim().isEmpty ||
-                    (o.customerName ?? '')
-                        .toLowerCase()
-                        .contains(_nameCtrl.text.trim().toLowerCase())) &&
+                    (o.customerName ?? '').toLowerCase().contains(
+                      _nameCtrl.text.trim().toLowerCase(),
+                    )) &&
                 (_phoneCtrl.text.trim().isEmpty ||
-                    (o.customerPhone ?? '')
-                        .toLowerCase()
-                        .contains(_phoneCtrl.text.trim().toLowerCase())) &&
+                    (o.customerPhone ?? '').toLowerCase().contains(
+                      _phoneCtrl.text.trim().toLowerCase(),
+                    )) &&
                 (_orderIdCtrl.text.trim().isEmpty ||
                     o.id.toString().contains(_orderIdCtrl.text.trim())) &&
                 (_detailsCtrl.text.trim().isEmpty ||
-                    (o.details ?? '')
-                        .toLowerCase()
-                        .contains(_detailsCtrl.text.trim().toLowerCase()));
+                    (o.details ?? '').toLowerCase().contains(
+                      _detailsCtrl.text.trim().toLowerCase(),
+                    ));
 
             final matchStatus =
                 _statusFilter == 'all' || o.status == _statusFilter;
@@ -310,9 +310,7 @@ class _CashierPanelPageState extends ConsumerState<CashierPanelPage> {
                 !_next3HoursOnly ||
                 (o.deliveryDatetime != null &&
                     o.deliveryDatetime!.isAfter(DateTime.now()) &&
-                    o.deliveryDatetime!
-                            .difference(DateTime.now())
-                            .inHours <=
+                    o.deliveryDatetime!.difference(DateTime.now()).inHours <=
                         3);
 
             return matchQuery &&
@@ -464,12 +462,14 @@ class _CashierPanelPageState extends ConsumerState<CashierPanelPage> {
             (prev, o) => prev + (o.remainingAmount ?? 0),
           );
           final overdueCount =
-              orders.where(
-                (o) =>
-                    o.deliveryDatetime != null &&
-                    o.deliveryDatetime!.isBefore(DateTime.now()) &&
-                    o.status != 'paid',
-              ).length;
+              orders
+                  .where(
+                    (o) =>
+                        o.deliveryDatetime != null &&
+                        o.deliveryDatetime!.isBefore(DateTime.now()) &&
+                        o.status != 'paid',
+                  )
+                  .length;
 
           return LayoutBuilder(
             builder: (context, constraints) {
@@ -478,617 +478,642 @@ class _CashierPanelPageState extends ConsumerState<CashierPanelPage> {
               return Center(
                 child: ConstrainedBox(
                   constraints: BoxConstraints(maxWidth: contentWidth),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-              // Alert Cards v2
-              ...(() {
-                final alerts = _buildAlerts(orders);
-                if (alerts.isNotEmpty) {
-                  final cardHeight = isDesktop ? 140.0 : 110.0;
-                          final cardWidth = isDesktop ? 200.0 : 160.0;
-                          final titleStyle = TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: isDesktop ? 16 : 15,
-                          );
-                          final countStyle = TextStyle(
-                            fontSize: isDesktop ? 14 : 13,
-                          );
-                          return [
-                            SizedBox(
-                              height: cardHeight,
-                              child: ListView.separated(
-                                padding: const EdgeInsets.fromLTRB(
-                                  12,
-                                  12,
-                                  12,
-                                  4,
-                                ),
-                                scrollDirection: Axis.horizontal,
-                                itemCount: alerts.length,
-                                separatorBuilder:
-                                    (_, __) => const SizedBox(width: 12),
-                                itemBuilder: (_, i) {
-                                  final a = alerts[i];
-                                  return GestureDetector(
-                                    onTap: () {
-                                      final isMobile =
-                                          MediaQuery.of(context).size.width <
-                                          700;
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Alert Cards v2
+                        ...(() {
+                          final alerts = _buildAlerts(orders);
+                          if (alerts.isNotEmpty) {
+                            final cardHeight = isDesktop ? 140.0 : 110.0;
+                            final cardWidth = isDesktop ? 200.0 : 160.0;
+                            final titleStyle = TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: isDesktop ? 16 : 15,
+                            );
+                            final countStyle = TextStyle(
+                              fontSize: isDesktop ? 14 : 13,
+                            );
+                            return [
+                              SizedBox(
+                                height: cardHeight,
+                                child: ListView.separated(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    12,
+                                    12,
+                                    12,
+                                    4,
+                                  ),
+                                  scrollDirection: Axis.horizontal,
+                                  itemCount: alerts.length,
+                                  separatorBuilder:
+                                      (_, __) => const SizedBox(width: 12),
+                                  itemBuilder: (_, i) {
+                                    final a = alerts[i];
+                                    return GestureDetector(
+                                      onTap: () {
+                                        final isMobile =
+                                            MediaQuery.of(context).size.width <
+                                            700;
 
-                                      showModalBottomSheet(
-                                        context: context,
-                                        isScrollControlled: true,
-                                        useSafeArea: true,
-                                        backgroundColor: Colors.transparent,
-                                        builder: (_) {
-                                          return Center(
-                                            child: ConstrainedBox(
-                                              constraints: BoxConstraints(
-                                                maxWidth:
-                                                    isMobile
-                                                        ? double.infinity
-                                                        : 520,
-                                                maxHeight:
-                                                    MediaQuery.of(
-                                                      context,
-                                                    ).size.height *
-                                                    0.9,
-                                              ),
-                                              child: Container(
-                                                margin:
-                                                    isMobile
-                                                        ? EdgeInsets.zero
-                                                        : const EdgeInsets.symmetric(
-                                                          vertical: 24,
-                                                        ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white,
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                        isMobile ? 0 : 20,
-                                                      ),
+                                        showModalBottomSheet(
+                                          context: context,
+                                          isScrollControlled: true,
+                                          useSafeArea: true,
+                                          backgroundColor: Colors.transparent,
+                                          builder: (_) {
+                                            return Center(
+                                              child: ConstrainedBox(
+                                                constraints: BoxConstraints(
+                                                  maxWidth:
+                                                      isMobile
+                                                          ? double.infinity
+                                                          : 520,
+                                                  maxHeight:
+                                                      MediaQuery.of(
+                                                        context,
+                                                      ).size.height *
+                                                      0.9,
                                                 ),
-                                                child: Column(
-                                                  children: [
-                                                    // HEADER
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.fromLTRB(
-                                                            16,
-                                                            12,
-                                                            8,
-                                                            8,
+                                                child: Container(
+                                                  margin:
+                                                      isMobile
+                                                          ? EdgeInsets.zero
+                                                          : const EdgeInsets.symmetric(
+                                                            vertical: 24,
                                                           ),
-                                                      child: Row(
-                                                        children: [
-                                                          Icon(
-                                                            a.icon,
-                                                            color:
-                                                                Colors.black87,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 8,
-                                                          ),
-                                                          Expanded(
-                                                            child: Text(
-                                                              a.title,
-                                                              style: const TextStyle(
-                                                                fontSize: 18,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w600,
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white,
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          isMobile ? 0 : 20,
+                                                        ),
+                                                  ),
+                                                  child: Column(
+                                                    children: [
+                                                      // HEADER
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets.fromLTRB(
+                                                              16,
+                                                              12,
+                                                              8,
+                                                              8,
+                                                            ),
+                                                        child: Row(
+                                                          children: [
+                                                            Icon(
+                                                              a.icon,
+                                                              color:
+                                                                  Colors
+                                                                      .black87,
+                                                            ),
+                                                            const SizedBox(
+                                                              width: 8,
+                                                            ),
+                                                            Expanded(
+                                                              child: Text(
+                                                                a.title,
+                                                                style: const TextStyle(
+                                                                  fontSize: 18,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w600,
+                                                                ),
                                                               ),
                                                             ),
-                                                          ),
-                                                          IconButton(
-                                                            icon: const Icon(
-                                                              Icons.close,
-                                                            ),
-                                                            onPressed:
-                                                                () =>
-                                                                    Navigator.pop(
-                                                                      context,
-                                                                    ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-
-                                                    const Divider(height: 1),
-
-                                                    // LIST
-                                                    Expanded(
-                                                      child:
-                                                          a.orders.isEmpty
-                                                              ? const Center(
-                                                                child: Text(
-                                                                  'Sipariş bulunamadı',
-                                                                  style: TextStyle(
-                                                                    color:
-                                                                        Colors
-                                                                            .black54,
-                                                                  ),
-                                                                ),
-                                                              )
-                                                              : ListView.separated(
-                                                                padding:
-                                                                    const EdgeInsets.all(
-                                                                      12,
-                                                                    ),
-                                                                itemCount:
-                                                                    a
-                                                                        .orders
-                                                                        .length,
-                                                                separatorBuilder:
-                                                                    (_, __) =>
-                                                                        const SizedBox(
-                                                                          height:
-                                                                              8,
-                                                                        ),
-                                                                itemBuilder: (
-                                                                  _,
-                                                                  index,
-                                                                ) {
-                                                                  final o =
-                                                                      a.orders[index];
-                                                                  return InkWell(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                          12,
-                                                                        ),
-                                                                    onTap: () {
+                                                            IconButton(
+                                                              icon: const Icon(
+                                                                Icons.close,
+                                                              ),
+                                                              onPressed:
+                                                                  () =>
                                                                       Navigator.pop(
                                                                         context,
-                                                                      );
-                                                                      _showOrderDetail(
-                                                                        context,
-                                                                        o,
-                                                                      );
-                                                                    },
-                                                                    child: Container(
-                                                                      padding:
-                                                                          const EdgeInsets.all(
+                                                                      ),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      ),
+
+                                                      const Divider(height: 1),
+
+                                                      // LIST
+                                                      Expanded(
+                                                        child:
+                                                            a.orders.isEmpty
+                                                                ? const Center(
+                                                                  child: Text(
+                                                                    'Sipariş bulunamadı',
+                                                                    style: TextStyle(
+                                                                      color:
+                                                                          Colors
+                                                                              .black54,
+                                                                    ),
+                                                                  ),
+                                                                )
+                                                                : ListView.separated(
+                                                                  padding:
+                                                                      const EdgeInsets.all(
+                                                                        12,
+                                                                      ),
+                                                                  itemCount:
+                                                                      a
+                                                                          .orders
+                                                                          .length,
+                                                                  separatorBuilder:
+                                                                      (
+                                                                        _,
+                                                                        __,
+                                                                      ) => const SizedBox(
+                                                                        height:
+                                                                            8,
+                                                                      ),
+                                                                  itemBuilder: (
+                                                                    _,
+                                                                    index,
+                                                                  ) {
+                                                                    final o =
+                                                                        a.orders[index];
+                                                                    return InkWell(
+                                                                      borderRadius:
+                                                                          BorderRadius.circular(
                                                                             12,
                                                                           ),
-                                                                      decoration: BoxDecoration(
-                                                                        color:
-                                                                            Colors.grey.shade50,
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(
+                                                                      onTap: () {
+                                                                        Navigator.pop(
+                                                                          context,
+                                                                        );
+                                                                        _showOrderDetail(
+                                                                          context,
+                                                                          o,
+                                                                        );
+                                                                      },
+                                                                      child: Container(
+                                                                        padding:
+                                                                            const EdgeInsets.all(
                                                                               12,
                                                                             ),
-                                                                        border: Border.all(
+                                                                        decoration: BoxDecoration(
                                                                           color:
-                                                                              Colors.black12,
+                                                                              Colors.grey.shade50,
+                                                                          borderRadius: BorderRadius.circular(
+                                                                            12,
+                                                                          ),
+                                                                          border: Border.all(
+                                                                            color:
+                                                                                Colors.black12,
+                                                                          ),
                                                                         ),
-                                                                      ),
-                                                                      child: Row(
-                                                                        children: [
-                                                                          // LEFT
-                                                                          Expanded(
-                                                                            child: Column(
+                                                                        child: Row(
+                                                                          children: [
+                                                                            // LEFT
+                                                                            Expanded(
+                                                                              child: Column(
+                                                                                crossAxisAlignment:
+                                                                                    CrossAxisAlignment.start,
+                                                                                children: [
+                                                                                  Text(
+                                                                                    o.customerName ??
+                                                                                        '—',
+                                                                                    style: const TextStyle(
+                                                                                      fontWeight:
+                                                                                          FontWeight.w600,
+                                                                                    ),
+                                                                                  ),
+                                                                                  const SizedBox(
+                                                                                    height:
+                                                                                        4,
+                                                                                  ),
+                                                                                  Text(
+                                                                                    o.deliveryDatetimeFormatted ??
+                                                                                        '-',
+                                                                                    style: const TextStyle(
+                                                                                      fontSize:
+                                                                                          12,
+                                                                                      color:
+                                                                                          Colors.black54,
+                                                                                    ),
+                                                                                  ),
+                                                                                ],
+                                                                              ),
+                                                                            ),
+                                                                            const SizedBox(
+                                                                              width:
+                                                                                  8,
+                                                                            ),
+                                                                            // RIGHT
+                                                                            Column(
                                                                               crossAxisAlignment:
-                                                                                  CrossAxisAlignment.start,
+                                                                                  CrossAxisAlignment.end,
                                                                               children: [
                                                                                 Text(
-                                                                                  o.customerName ??
-                                                                                      '—',
+                                                                                  '${o.remainingAmount ?? 0} ₺',
                                                                                   style: const TextStyle(
                                                                                     fontWeight:
-                                                                                        FontWeight.w600,
+                                                                                        FontWeight.bold,
                                                                                   ),
                                                                                 ),
                                                                                 const SizedBox(
                                                                                   height:
                                                                                       4,
                                                                                 ),
-                                                                                Text(
-                                                                                  o.deliveryDatetimeFormatted ??
-                                                                                      '-',
-                                                                                  style: const TextStyle(
-                                                                                    fontSize:
-                                                                                        12,
-                                                                                    color:
-                                                                                        Colors.black54,
+                                                                                Chip(
+                                                                                  label: Text(
+                                                                                    o.statusLabel,
                                                                                   ),
+                                                                                  visualDensity:
+                                                                                      VisualDensity.compact,
                                                                                 ),
                                                                               ],
                                                                             ),
-                                                                          ),
-                                                                          const SizedBox(
-                                                                            width:
-                                                                                8,
-                                                                          ),
-                                                                          // RIGHT
-                                                                          Column(
-                                                                            crossAxisAlignment:
-                                                                                CrossAxisAlignment.end,
-                                                                            children: [
-                                                                              Text(
-                                                                                '${o.remainingAmount ?? 0} ₺',
-                                                                                style: const TextStyle(
-                                                                                  fontWeight:
-                                                                                      FontWeight.bold,
-                                                                                ),
-                                                                              ),
-                                                                              const SizedBox(
-                                                                                height:
-                                                                                    4,
-                                                                              ),
-                                                                              Chip(
-                                                                                label: Text(
-                                                                                  o.statusLabel,
-                                                                                ),
-                                                                                visualDensity:
-                                                                                    VisualDensity.compact,
-                                                                              ),
-                                                                            ],
-                                                                          ),
-                                                                        ],
+                                                                          ],
+                                                                        ),
                                                                       ),
-                                                                    ),
-                                                                  );
-                                                                },
-                                                              ),
-                                                    ),
-                                                  ],
+                                                                    );
+                                                                  },
+                                                                ),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          );
-                                        },
-                                      );
-                                    },
-                                    child: Container(
-                                      width: cardWidth,
-                                      padding: EdgeInsets.all(
-                                        isDesktop ? 16 : 12,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: a.color,
-                                        borderRadius: BorderRadius.circular(16),
-                                        border: Border.all(
-                                          color: Colors.black12,
-                                        ),
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Icon(
-                                            a.icon,
-                                            size: isDesktop ? 28 : 26,
-                                          ),
-                                          const Spacer(),
-                                          Text(a.title, style: titleStyle),
-                                          Text(
-                                            '${a.count} sipariş',
-                                            style: countStyle,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ];
-                        }
-                        return [];
-                      })(),
-              if (todayCount > 0)
-                Container(
-                  margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.blue.shade100),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(
-                                Icons.calendar_today,
-                                size: 18,
-                                color: Colors.blue,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Bugün teslim edilecek $todayCount sipariş var',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                    ],
-                  ),
-                ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    _StatChip(
-                      label: 'Toplam',
-                      value: '$totalOrders',
-                      icon: Icons.list_alt,
-                    ),
-                    _StatChip(
-                      label: 'Hazırlanıyor',
-                      value: '$preparingCount',
-                      icon: Icons.timer,
-                      color: Colors.blue.shade50,
-                    ),
-                    _StatChip(
-                      label: 'Hazır',
-                      value: '$readyCount',
-                      icon: Icons.check_circle,
-                      color: Colors.green.shade50,
-                    ),
-                    _StatChip(
-                      label: 'Geciken',
-                      value: '$overdueCount',
-                      icon: Icons.warning_amber_rounded,
-                      color: Colors.red.shade50,
-                    ),
-                    _StatChip(
-                      label: 'Ödenmemiş',
-                      value: '$unpaidSum ₺',
-                      icon: Icons.payments,
-                      color: Colors.orange.shade50,
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.black12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: LayoutBuilder(
-                              builder: (context, constraints) {
-                                final filtersStack =
-                                    constraints.maxWidth < 860 ||
-                                    isMobile ||
-                                    isTablet;
-                                final searchWidth =
-                                    filtersStack ? constraints.maxWidth : 320.0;
-
-                                return Wrap(
-                                  spacing: 10,
-                                  runSpacing: 10,
-                                  crossAxisAlignment: WrapCrossAlignment.center,
-                                  alignment: WrapAlignment.start,
-                                  children: [
-                                    ConstrainedBox(
-                                      constraints: BoxConstraints(
-                                        maxWidth: searchWidth,
-                                        minWidth:
-                                            filtersStack
-                                                ? constraints.maxWidth
-                                                : 240,
-                                      ),
-                                      child: TextField(
-                                        controller: _searchCtrl,
-                                        onChanged: (_) => setState(() {}),
-                                        decoration: InputDecoration(
-                                          prefixIcon: const Icon(Icons.search),
-                                          hintText:
-                                              'Sipariş / müşteri / telefon ara',
-                                          isDense: true,
-                                          filled: true,
-                                          fillColor: Colors.grey.shade50,
-                                          border: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                          ),
-                                          enabledBorder: OutlineInputBorder(
-                                            borderRadius: BorderRadius.circular(
-                                              12,
-                                            ),
-                                            borderSide: BorderSide(
-                                              color: Colors.grey.shade300,
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    DropdownButton<String>(
-                                      value: _statusFilter,
-                                      onChanged: (v) {
-                                        if (v == null) return;
-                                        setState(() => _statusFilter = v);
+                                            );
+                                          },
+                                        );
                                       },
-                                      items: const [
-                                        DropdownMenuItem(
-                                          value: 'all',
-                                          child: Text('Tümü'),
+                                      child: Container(
+                                        width: cardWidth,
+                                        padding: EdgeInsets.all(
+                                          isDesktop ? 16 : 12,
                                         ),
-                                        DropdownMenuItem(
-                                          value: 'preparing',
-                                          child: Text('Hazırlanıyor'),
+                                        decoration: BoxDecoration(
+                                          color: a.color,
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          border: Border.all(
+                                            color: Colors.black12,
+                                          ),
                                         ),
-                                        DropdownMenuItem(
-                                          value: 'ready',
-                                          child: Text('Hazır'),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'paid',
-                                          child: Text('Ödendi'),
-                                        ),
-                                      ],
-                                    ),
-                                    OutlinedButton.icon(
-                                      icon: const Icon(Icons.date_range),
-                                      label: Text(
-                                        _fromDate == null
-                                            ? 'Başlangıç'
-                                            : '${_fromDate!.day}.${_fromDate!.month}.${_fromDate!.year}',
-                                      ),
-                                      onPressed: _pickFromDate,
-                                    ),
-                                    OutlinedButton.icon(
-                                      icon: const Icon(Icons.event),
-                              label: Text(
-                                _toDate == null
-                                    ? 'Bitiş'
-                                    : '${_toDate!.day}.${_toDate!.month}.${_toDate!.year}',
-                              ),
-                              onPressed: _pickToDate,
-                            ),
-                            ActionChip(
-                              label: Text(
-                                _next3HoursOnly
-                                    ? 'Önümüzdeki 3 saat (açık)'
-                                    : 'Önümüzdeki 3 saat',
-                              ),
-                              avatar: const Icon(Icons.schedule, size: 16),
-                              onPressed: () => setState(
-                                () => _next3HoursOnly = !_next3HoursOnly,
-                              ),
-                            ),
-                            ActionChip(
-                              label: const Text('Bugün'),
-                              onPressed: _setToday,
-                            ),
-                            ActionChip(
-                              label: const Text('Yarın'),
-                              onPressed: _setTomorrow,
-                            ),
-                            ActionChip(
-                              label: const Text('Bu hafta'),
-                              onPressed: _setThisWeek,
-                            ),
-                            ActionChip(
-                              label: const Text('Hafta sonu'),
-                              onPressed: _setWeekend,
-                            ),
-                            if (_fromDate != null || _toDate != null)
-                              TextButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _fromDate = null;
-                                    _toDate = null;
-                                    _next3HoursOnly = false;
-                                  });
-                                },
-                                child: const Text('Temizle'),
-                              ),
-                                    TextButton.icon(
-                                      onPressed: () => setState(
-                                        () => _showAdvancedFilters =
-                                            !_showAdvancedFilters,
-                                      ),
-                                      icon: Icon(
-                                        _showAdvancedFilters
-                                            ? Icons.expand_less
-                                            : Icons.manage_search,
-                                      ),
-                                      label: Text(
-                                        _showAdvancedFilters
-                                            ? 'Gelişmiş filtreleri gizle'
-                                            : 'Gelişmiş filtreler',
-                                      ),
-                                    ),
-                                    if (_showAdvancedFilters)
-                                      SizedBox(
-                                        width: filtersStack
-                                            ? constraints.maxWidth
-                                            : constraints.maxWidth - 24,
-                                        child: Wrap(
-                                          spacing: 10,
-                                          runSpacing: 10,
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
-                                            _AdvancedField(
-                                              controller: _nameCtrl,
-                                              label: 'Ad',
-                                              icon: Icons.person,
-                                              onChanged: () => setState(() {}),
+                                            Icon(
+                                              a.icon,
+                                              size: isDesktop ? 28 : 26,
                                             ),
-                                            _AdvancedField(
-                                              controller: _phoneCtrl,
-                                              label: 'Telefon',
-                                              icon: Icons.phone,
-                                              keyboardType: TextInputType.phone,
-                                              onChanged: () => setState(() {}),
-                                            ),
-                                            _AdvancedField(
-                                              controller: _orderIdCtrl,
-                                              label: 'Sipariş No',
-                                              icon: Icons.tag,
-                                              keyboardType: TextInputType.number,
-                                              onChanged: () => setState(() {}),
-                                            ),
-                                            _AdvancedField(
-                                              controller: _detailsCtrl,
-                                              label: 'Sipariş içeriği',
-                                              icon: Icons.list_alt,
-                                              onChanged: () => setState(() {}),
+                                            const Spacer(),
+                                            Text(a.title, style: titleStyle),
+                                            Text(
+                                              '${a.count} sipariş',
+                                              style: countStyle,
                                             ),
                                           ],
                                         ),
                                       ),
-                                  ],
-                                );
-                              },
+                                    );
+                                  },
+                                ),
+                              ),
+                            ];
+                          }
+                          return [];
+                        })(),
+                        if (todayCount > 0)
+                          Container(
+                            margin: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.blue.shade100),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.calendar_today,
+                                  size: 18,
+                                  color: Colors.blue,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Bugün teslim edilecek $todayCount sipariş var',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 6, 12, 2),
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              _StatChip(
+                                label: 'Toplam',
+                                value: '$totalOrders',
+                                icon: Icons.list_alt,
+                              ),
+                              _StatChip(
+                                label: 'Hazırlanıyor',
+                                value: '$preparingCount',
+                                icon: Icons.timer,
+                                color: Colors.blue.shade50,
+                              ),
+                              _StatChip(
+                                label: 'Hazır',
+                                value: '$readyCount',
+                                icon: Icons.check_circle,
+                                color: Colors.green.shade50,
+                              ),
+                              _StatChip(
+                                label: 'Geciken',
+                                value: '$overdueCount',
+                                icon: Icons.warning_amber_rounded,
+                                color: Colors.red.shade50,
+                              ),
+                              _StatChip(
+                                label: 'Ödenmemiş',
+                                value: '$unpaidSum ₺',
+                                icon: Icons.payments,
+                                color: Colors.orange.shade50,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: Colors.black12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.04),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: LayoutBuilder(
+                                builder: (context, constraints) {
+                                  final filtersStack =
+                                      constraints.maxWidth < 860 ||
+                                      isMobile ||
+                                      isTablet;
+                                  final searchWidth =
+                                      filtersStack
+                                          ? constraints.maxWidth
+                                          : 320.0;
+
+                                  return Wrap(
+                                    spacing: 10,
+                                    runSpacing: 10,
+                                    crossAxisAlignment:
+                                        WrapCrossAlignment.center,
+                                    alignment: WrapAlignment.start,
+                                    children: [
+                                      ConstrainedBox(
+                                        constraints: BoxConstraints(
+                                          maxWidth: searchWidth,
+                                          minWidth:
+                                              filtersStack
+                                                  ? constraints.maxWidth
+                                                  : 240,
+                                        ),
+                                        child: TextField(
+                                          controller: _searchCtrl,
+                                          onChanged: (_) => setState(() {}),
+                                          decoration: InputDecoration(
+                                            prefixIcon: const Icon(
+                                              Icons.search,
+                                            ),
+                                            hintText:
+                                                'Sipariş / müşteri / telefon ara',
+                                            isDense: true,
+                                            filled: true,
+                                            fillColor: Colors.grey.shade50,
+                                            border: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              borderSide: BorderSide(
+                                                color: Colors.grey.shade300,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      DropdownButton<String>(
+                                        value: _statusFilter,
+                                        onChanged: (v) {
+                                          if (v == null) return;
+                                          setState(() => _statusFilter = v);
+                                        },
+                                        items: const [
+                                          DropdownMenuItem(
+                                            value: 'all',
+                                            child: Text('Tümü'),
+                                          ),
+                                          DropdownMenuItem(
+                                            value: 'preparing',
+                                            child: Text('Hazırlanıyor'),
+                                          ),
+                                          DropdownMenuItem(
+                                            value: 'ready',
+                                            child: Text('Hazır'),
+                                          ),
+                                          DropdownMenuItem(
+                                            value: 'paid',
+                                            child: Text('Ödendi'),
+                                          ),
+                                        ],
+                                      ),
+                                      OutlinedButton.icon(
+                                        icon: const Icon(Icons.date_range),
+                                        label: Text(
+                                          _fromDate == null
+                                              ? 'Başlangıç'
+                                              : '${_fromDate!.day}.${_fromDate!.month}.${_fromDate!.year}',
+                                        ),
+                                        onPressed: _pickFromDate,
+                                      ),
+                                      OutlinedButton.icon(
+                                        icon: const Icon(Icons.event),
+                                        label: Text(
+                                          _toDate == null
+                                              ? 'Bitiş'
+                                              : '${_toDate!.day}.${_toDate!.month}.${_toDate!.year}',
+                                        ),
+                                        onPressed: _pickToDate,
+                                      ),
+                                      ActionChip(
+                                        label: Text(
+                                          _next3HoursOnly
+                                              ? 'Önümüzdeki 3 saat (açık)'
+                                              : 'Önümüzdeki 3 saat',
+                                        ),
+                                        avatar: const Icon(
+                                          Icons.schedule,
+                                          size: 16,
+                                        ),
+                                        onPressed:
+                                            () => setState(
+                                              () =>
+                                                  _next3HoursOnly =
+                                                      !_next3HoursOnly,
+                                            ),
+                                      ),
+                                      ActionChip(
+                                        label: const Text('Bugün'),
+                                        onPressed: _setToday,
+                                      ),
+                                      ActionChip(
+                                        label: const Text('Yarın'),
+                                        onPressed: _setTomorrow,
+                                      ),
+                                      ActionChip(
+                                        label: const Text('Bu hafta'),
+                                        onPressed: _setThisWeek,
+                                      ),
+                                      ActionChip(
+                                        label: const Text('Hafta sonu'),
+                                        onPressed: _setWeekend,
+                                      ),
+                                      if (_fromDate != null || _toDate != null)
+                                        TextButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _fromDate = null;
+                                              _toDate = null;
+                                              _next3HoursOnly = false;
+                                            });
+                                          },
+                                          child: const Text('Temizle'),
+                                        ),
+                                      TextButton.icon(
+                                        onPressed:
+                                            () => setState(
+                                              () =>
+                                                  _showAdvancedFilters =
+                                                      !_showAdvancedFilters,
+                                            ),
+                                        icon: Icon(
+                                          _showAdvancedFilters
+                                              ? Icons.expand_less
+                                              : Icons.manage_search,
+                                        ),
+                                        label: Text(
+                                          _showAdvancedFilters
+                                              ? 'Gelişmiş filtreleri gizle'
+                                              : 'Gelişmiş filtreler',
+                                        ),
+                                      ),
+                                      if (_showAdvancedFilters)
+                                        SizedBox(
+                                          width:
+                                              filtersStack
+                                                  ? constraints.maxWidth
+                                                  : constraints.maxWidth - 24,
+                                          child: Wrap(
+                                            spacing: 10,
+                                            runSpacing: 10,
+                                            children: [
+                                              _AdvancedField(
+                                                controller: _nameCtrl,
+                                                label: 'Ad',
+                                                icon: Icons.person,
+                                                onChanged:
+                                                    () => setState(() {}),
+                                              ),
+                                              _AdvancedField(
+                                                controller: _phoneCtrl,
+                                                label: 'Telefon',
+                                                icon: Icons.phone,
+                                                keyboardType:
+                                                    TextInputType.phone,
+                                                onChanged:
+                                                    () => setState(() {}),
+                                              ),
+                                              _AdvancedField(
+                                                controller: _orderIdCtrl,
+                                                label: 'Sipariş No',
+                                                icon: Icons.tag,
+                                                keyboardType:
+                                                    TextInputType.number,
+                                                onChanged:
+                                                    () => setState(() {}),
+                                              ),
+                                              _AdvancedField(
+                                                controller: _detailsCtrl,
+                                                label: 'Sipariş içeriği',
+                                                icon: Icons.list_alt,
+                                                onChanged:
+                                                    () => setState(() {}),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                    ],
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Expanded(
-                child:
-                    filtered.isEmpty
-                        ? const Center(
-                          child: Text(
-                            'Sonuç bulunamadı\nFiltreleri kontrol edin veya temizleyin',
-                            style: TextStyle(color: Colors.black54),
-                            textAlign: TextAlign.center,
+                        const SizedBox(height: 6),
+                        if (filtered.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.all(24),
+                            child: Center(
+                              child: Text(
+                                'Sonuç bulunamadı\nFiltreleri kontrol edin veya temizleyin',
+                                style: TextStyle(color: Colors.black54),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          )
+                        else
+                          ListView.separated(
+                            padding: const EdgeInsets.all(12),
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: filtered.length,
+                            separatorBuilder:
+                                (_, __) => const SizedBox(height: 12),
+                            itemBuilder: (_, i) {
+                              final order = filtered[i];
+                              final isFrequentCustomer = _isFrequent(
+                                phoneFrequency,
+                                order.customerPhone,
+                              );
+                              return isMobile
+                                  ? _CashierOrderCardMobile(
+                                    order: order,
+                                    isFrequentCustomer: isFrequentCustomer,
+                                  )
+                                  : _CashierOrderCardDesktop(
+                                    order: order,
+                                    isFrequentCustomer: isFrequentCustomer,
+                                  );
+                            },
                           ),
-                        )
-                        : ListView.separated(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: filtered.length,
-                                  separatorBuilder:
-                                      (_, __) => const SizedBox(height: 12),
-                                  itemBuilder: (_, i) {
-                                    final order = filtered[i];
-                                    final isFrequentCustomer = _isFrequent(
-                                      phoneFrequency,
-                                      order.customerPhone,
-                                    );
-                                    return isMobile
-                                        ? _CashierOrderCardMobile(
-                                          order: order,
-                                          isFrequentCustomer:
-                                              isFrequentCustomer,
-                                        )
-                                        : _CashierOrderCardDesktop(
-                                          order: order,
-                                          isFrequentCustomer:
-                                              isFrequentCustomer,
-                                        );
-                                  },
-                                ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -1507,19 +1532,19 @@ class _OrderCardContent extends ConsumerWidget {
             _MoneyInfo('Kapora', order.depositAmount),
             _MoneyInfo('Kalan', order.remainingAmount, highlight: true),
           ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  IconButton(
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            IconButton(
               icon: const Icon(Icons.info_outline),
               onPressed: () => _showOrderDetail(context, order),
             ),
-                  const Spacer(),
-                  FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.green.shade600,
-                      foregroundColor: Colors.white,
+            const Spacer(),
+            FilledButton.icon(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.green.shade600,
+                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 10,
@@ -1527,13 +1552,13 @@ class _OrderCardContent extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                    ),
-                    onPressed:
-                        (!canPay || isPaying)
-                            ? null
-                            : () => _handlePayment(context, ref, order),
-                    icon:
-                        isPaying
+              ),
+              onPressed:
+                  (!canPay || isPaying)
+                      ? null
+                      : () => _handlePayment(context, ref, order),
+              icon:
+                  isPaying
                       ? const SizedBox(
                         width: 14,
                         height: 14,
@@ -1722,12 +1747,12 @@ Future<void> _handlePayment(
                     ),
                     FilledButton(
                       onPressed: () {
-                        final entered =
-                            int.tryParse(amountCtrl.text.trim());
+                        final entered = int.tryParse(amountCtrl.text.trim());
                         if (entered != remaining) {
                           setState(
-                            () => error =
-                                'Lütfen kalan tutarı ($remaining) aynen yazın',
+                            () =>
+                                error =
+                                    'Lütfen kalan tutarı ($remaining) aynen yazın',
                           );
                           return;
                         }
