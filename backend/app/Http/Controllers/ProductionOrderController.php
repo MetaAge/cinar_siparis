@@ -40,4 +40,15 @@ class ProductionOrderController extends Controller
 
         return response()->json($orders);
     }
+
+    // GEÇMİŞ (tamamlanan/ödenen)
+    public function history(): JsonResponse
+    {
+        $orders = Order::whereIn('status', ['ready', 'paid'])
+            ->orderByDesc('delivery_datetime')
+            ->limit(200)
+            ->get();
+
+        return response()->json($orders);
+    }
 }

@@ -45,6 +45,7 @@ dependencies:
   image_picker: ^1.0.7
   image_picker_for_web: ^3.0.0
   fl_chart: ^0.63.0
+  url_launcher: ^6.3.1
   
 
 dev_dependencies:

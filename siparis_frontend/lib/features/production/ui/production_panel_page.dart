@@ -23,12 +23,13 @@ class _ProductionPanelPageState extends ConsumerState<ProductionPanelPage>
   @override
   void initState() {
     super.initState();
-    _tab = TabController(length: 3, vsync: this);
+    _tab = TabController(length: 4, vsync: this);
 
     _pollingTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       ref.invalidate(productionTodayProvider);
       ref.invalidate(productionLateProvider);
       ref.invalidate(productionUpcomingProvider);
+      ref.invalidate(productionHistoryProvider);
     });
   }
 
@@ -45,6 +46,7 @@ class _ProductionPanelPageState extends ConsumerState<ProductionPanelPage>
     if (idx == 0) ref.invalidate(productionTodayProvider);
     if (idx == 1) ref.invalidate(productionLateProvider);
     if (idx == 2) ref.invalidate(productionUpcomingProvider);
+    if (idx == 3) ref.invalidate(productionHistoryProvider);
   }
 
   @override
@@ -52,6 +54,7 @@ class _ProductionPanelPageState extends ConsumerState<ProductionPanelPage>
     final auth = ref.watch(authProvider);
 
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('İmalat Paneli'),
         actions: [
@@ -75,10 +78,14 @@ class _ProductionPanelPageState extends ConsumerState<ProductionPanelPage>
         ],
         bottom: TabBar(
           controller: _tab,
-          tabs: const [
-            Tab(text: 'Bugün'),
-            Tab(text: 'Geciken'),
-            Tab(text: 'Yaklaşan'),
+          tabs: [
+            _TabWithCount(label: 'Bugün', provider: productionTodayProvider),
+            _TabWithCount(label: 'Geciken', provider: productionLateProvider),
+            _TabWithCount(
+              label: 'Yaklaşan',
+              provider: productionUpcomingProvider,
+            ),
+            _TabWithCount(label: 'Geçmiş', provider: productionHistoryProvider),
           ],
         ),
       ),
@@ -88,10 +95,19 @@ class _ProductionPanelPageState extends ConsumerState<ProductionPanelPage>
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: TextField(
               controller: _customerFilterCtrl,
-              decoration: const InputDecoration(
-                prefixIcon: Icon(Icons.search),
+              decoration: InputDecoration(
+                prefixIcon: const Icon(Icons.search),
                 hintText: 'Müşteri adına göre filtrele',
                 isDense: true,
+                filled: true,
+                fillColor: Colors.white,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
               ),
               onChanged: (v) {
                 setState(() => _customerFilter = v.trim().toLowerCase());
@@ -114,6 +130,10 @@ class _ProductionPanelPageState extends ConsumerState<ProductionPanelPage>
                   kind: _OrdersKind.upcoming,
                   customerFilter: _customerFilter,
                 ),
+                _OrdersTab(
+                  kind: _OrdersKind.history,
+                  customerFilter: _customerFilter,
+                ),
               ],
             ),
           ),
@@ -123,26 +143,66 @@ class _ProductionPanelPageState extends ConsumerState<ProductionPanelPage>
   }
 }
 
-enum _OrdersKind { today, late, upcoming }
+enum _OrdersKind { today, late, upcoming, history }
 
-class _OrdersTab extends ConsumerWidget {
+class _OrdersTab extends ConsumerStatefulWidget {
   final _OrdersKind kind;
   final String customerFilter;
   const _OrdersTab({required this.kind, required this.customerFilter});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_OrdersTab> createState() => _OrdersTabState();
+}
+
+class _OrdersTabState extends ConsumerState<_OrdersTab> {
+  @override
+  Widget build(BuildContext context) {
+    final kind = widget.kind;
     final async = switch (kind) {
       _OrdersKind.today => ref.watch(productionTodayProvider),
       _OrdersKind.late => ref.watch(productionLateProvider),
       _OrdersKind.upcoming => ref.watch(productionUpcomingProvider),
+      _OrdersKind.history => ref.watch(productionHistoryProvider),
     };
 
     final title = switch (kind) {
       _OrdersKind.today => 'Bugün Teslim',
       _OrdersKind.late => 'Geciken Siparişler',
       _OrdersKind.upcoming => 'Yaklaşan Teslim',
+      _OrdersKind.history => 'Geçmiş Siparişler',
     };
+
+    void _maybeNotify(List<OrderModel> orders) {
+      final criticalCount = orders.where((o) => _isCritical(o)).length;
+      final lateCount =
+          orders.where((o) => o.isLate && o.status != 'ready').length;
+
+      if (lateCount > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (ScaffoldMessenger.maybeOf(context)?.mounted ?? false) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('⚠️ $lateCount geciken sipariş var'),
+                backgroundColor: Colors.red.shade600,
+              ),
+            );
+          }
+        });
+      } else if (criticalCount > 0) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (ScaffoldMessenger.maybeOf(context)?.mounted ?? false) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  '⏰ Teslime 3 saatten az kalan $criticalCount sipariş var',
+                ),
+                backgroundColor: Colors.orange.shade700,
+              ),
+            );
+          }
+        });
+      }
+    }
 
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -151,34 +211,114 @@ class _OrdersTab extends ConsumerWidget {
             title: title,
             message: e.toString(),
             onRetry: () {
-              if (kind == _OrdersKind.today)
+              if (kind == _OrdersKind.today) {
                 ref.invalidate(productionTodayProvider);
-              if (kind == _OrdersKind.late)
+              }
+              if (kind == _OrdersKind.late) {
                 ref.invalidate(productionLateProvider);
-              if (kind == _OrdersKind.upcoming)
+              }
+              if (kind == _OrdersKind.upcoming) {
                 ref.invalidate(productionUpcomingProvider);
+              }
+              if (kind == _OrdersKind.history) {
+                ref.invalidate(productionHistoryProvider);
+              }
             },
           ),
       data: (orders) {
+        _maybeNotify(orders);
         final filteredOrders =
-            customerFilter.isEmpty
+            widget.customerFilter.isEmpty
                 ? orders
                 : orders.where((o) {
                   final name = (o.customerName ?? '').toLowerCase();
-                  return name.contains(customerFilter);
+                  return name.contains(widget.customerFilter);
                 }).toList();
+
+        final readyCount =
+            filteredOrders.where((o) => o.status == 'ready').length;
+        final lateCount =
+            filteredOrders.where((o) => o.isLate && o.status != 'ready').length;
+        final preparingCount =
+            filteredOrders.where((o) => o.status == 'preparing').length;
+        final unpaidSum = filteredOrders.fold<int>(
+          0,
+          (p, o) => p + (o.remainingAmount ?? 0),
+        );
+        final criticalOrders =
+            filteredOrders.where((o) => _isCritical(o)).toList();
+        final lateOrders =
+            filteredOrders
+                .where((o) => o.isLate && o.status != 'ready')
+                .toList();
+        final nonLateOrders =
+            filteredOrders
+                .where((o) => !(o.isLate && o.status != 'ready'))
+                .toList();
+
+        // Reorder: late first, then others by delivery time
+        final sortedOrders = [...lateOrders, ...nonLateOrders]..sort((a, b) {
+          final ad = a.deliveryDatetime;
+          final bd = b.deliveryDatetime;
+          if (ad == null && bd == null) return 0;
+          if (ad == null) return 1;
+          if (bd == null) return -1;
+          return ad.compareTo(bd);
+        });
 
         Widget densityHeader() {
           return Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.bar_chart, size: 18, color: Colors.black54),
-                const SizedBox(width: 8),
-                Text(
-                  'Toplam Sipariş: ${filteredOrders.length}',
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.bar_chart,
+                      size: 18,
+                      color: Colors.black54,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Toplam Sipariş: ${filteredOrders.length}',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    _StatChip(
+                      label: 'Hazırlanıyor',
+                      value: '$preparingCount',
+                      icon: Icons.timer,
+                      color: Colors.blue.shade50,
+                    ),
+                    _StatChip(
+                      label: 'Hazır',
+                      value: '$readyCount',
+                      icon: Icons.check_circle,
+                      color: Colors.green.shade50,
+                    ),
+                    _StatChip(
+                      label: 'Geciken',
+                      value: '$lateCount',
+                      icon: Icons.warning_amber_rounded,
+                      color: Colors.red.shade50,
+                    ),
+                    _StatChip(
+                      label: 'Ödenmemiş',
+                      value: '$unpaidSum ₺',
+                      icon: Icons.payments,
+                      color: Colors.orange.shade50,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _HourlyHeatmap(orders: filteredOrders),
               ],
             ),
           );
@@ -193,16 +333,45 @@ class _OrdersTab extends ConsumerWidget {
           children: [
             densityHeader(),
             const SizedBox(height: 6),
+            if (criticalOrders.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.red.shade100),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.warning_amber, color: Colors.red),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Teslime 3 saatten az kalan ${criticalOrders.length} sipariş var',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            if (criticalOrders.isNotEmpty) const SizedBox(height: 8),
             Expanded(
               child: ListView.separated(
                 padding: const EdgeInsets.all(16),
-                itemCount: filteredOrders.length,
+                itemCount: sortedOrders.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 10),
                 itemBuilder: (context, i) {
-                  final o = filteredOrders[i];
+                  final o = sortedOrders[i];
                   return _OrderCard(
                     order: o,
                     highlight: kind == _OrdersKind.late,
+                    showReadyButton: kind != _OrdersKind.history,
                   );
                 },
               ),
@@ -217,8 +386,13 @@ class _OrdersTab extends ConsumerWidget {
 class _OrderCard extends ConsumerStatefulWidget {
   final OrderModel order;
   final bool highlight;
+  final bool showReadyButton;
 
-  const _OrderCard({required this.order, required this.highlight});
+  const _OrderCard({
+    required this.order,
+    required this.highlight,
+    this.showReadyButton = true,
+  });
 
   @override
   ConsumerState<_OrderCard> createState() => _OrderCardState();
@@ -241,7 +415,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
       text = 'Gecikti';
     } else if (diff.inHours <= 24) {
       bg = Colors.orange;
-      text = '${diff.inHours} sa';
+      text = diff.inHours >= 1 ? '${diff.inHours} sa' : '${diff.inMinutes} dk';
     } else {
       bg = Colors.blue;
       text = '${diff.inDays} gün';
@@ -252,6 +426,7 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
       decoration: BoxDecoration(
         color: bg.withOpacity(0.15),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: bg.withOpacity(0.3)),
       ),
       child: Text(
         text,
@@ -261,6 +436,28 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
   }
 
   Future<void> _markReady() async {
+    final confirm =
+        await showDialog<bool>(
+          context: context,
+          builder:
+              (_) => AlertDialog(
+                title: const Text('Onay'),
+                content: const Text('Bu siparişi hazırlandı olarak işaretle?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Vazgeç'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Onayla'),
+                  ),
+                ],
+              ),
+        ) ??
+        false;
+    if (!confirm) return;
+
     setState(() => _loading = true);
 
     try {
@@ -280,127 +477,132 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
     showDialog(
       context: context,
       builder: (_) {
-        return AlertDialog(
+        return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(18),
           ),
-          title: Text('Sipariş #${o.id} Detayları'),
-          content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: SingleChildScrollView(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Görseller bölümü
-                  if (hasImages) ...[
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 8.0),
-                      child: Text(
-                        "Sipariş Görselleri",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+          insetPadding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 24,
+          ),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 540),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Sipariş #${o.id} Detayları',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(Icons.close),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    const Divider(height: 1),
+                    const SizedBox(height: 12),
+
+                    // Müşteri Bilgileri
+                    _sectionHeader('Müşteri Bilgileri', Icons.person),
+                    _detailRowPolished('Müşteri', o.customerName ?? '-'),
+                    _detailRowPolished('Telefon', o.customerPhone ?? '-'),
+                    const SizedBox(height: 12),
+
+                    // Sipariş Bilgileri
+                    _sectionHeader('Sipariş Bilgileri', Icons.list_alt),
+                    _detailRowPolished('Sipariş', o.details ?? '-'),
+                    const SizedBox(height: 6),
+                    _detailRowPolished(
+                      'Toplam',
+                      '${o.orderTotal?.toString() ?? '-'} ₺',
+                    ),
+                    _detailRowPolished(
+                      'Kapora',
+                      '${o.depositAmount?.toString() ?? 0} ₺',
+                    ),
+                    _detailRowPolished(
+                      'Kalan',
+                      '${o.remainingAmount?.toString() ?? '-'} ₺',
+                    ),
+                    _detailRowPolished('Durum', o.statusLabel),
+                    _detailRowPolished(
+                      'Teslim',
+                      o.deliveryDatetimeFormatted ?? '-',
+                    ),
+                    if (hasImages) ...[
+                      const SizedBox(height: 14),
+                      _sectionHeader('Görseller', Icons.image),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        padding: const EdgeInsets.all(10),
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          children:
+                              o.imageUrls.map((url) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (_) => _FullscreenImage(url: url),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 96,
+                                    height: 96,
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Colors.grey[300]!,
+                                        width: 1,
+                                      ),
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: Colors.white,
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: DebugNetworkImage(rawUrl: url),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
                         ),
                       ),
-                    ),
-                    Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      padding: const EdgeInsets.all(10),
-                      margin: const EdgeInsets.only(bottom: 20),
-                      child: Wrap(
-                        spacing: 12,
-                        runSpacing: 12,
-                        children:
-                            o.imageUrls.map((url) {
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) => _FullscreenImage(url: url),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  width: 96,
-                                  height: 96,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.grey[300]!,
-                                      width: 1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(10),
-                                    color: Colors.white,
-                                  ),
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: DebugNetworkImage(rawUrl: url),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+                    ],
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Kapat'),
                       ),
                     ),
                   ],
-                  // Müşteri Bilgileri bölümü başlığı
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6.0),
-                    child: Text(
-                      "Müşteri Bilgileri",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  _detailRowPolished('Müşteri', o.customerName ?? '-'),
-                  _detailRowPolished('Telefon', o.customerPhone ?? '-'),
-                  const SizedBox(height: 16),
-                  // Sipariş Bilgileri bölümü başlığı
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 6.0),
-                    child: Text(
-                      "Sipariş Bilgileri",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                  _detailRowPolished('Sipariş', o.details ?? '-'),
-                  const SizedBox(height: 8),
-                  _detailRowPolished(
-                    'Toplam',
-                    '${o.orderTotal.toString() ?? '-'} ₺',
-                  ),
-                  _detailRowPolished(
-                    'Kapora',
-                    '${o.depositAmount.toString() ?? 0} ₺',
-                  ),
-                  _detailRowPolished(
-                    'Kalan',
-                    '${o.remainingAmount.toString() ?? '-'} ₺',
-                  ),
-                  const SizedBox(height: 8),
-                  _detailRowPolished(
-                    'Teslim',
-                    o.deliveryDatetimeFormatted ?? '-',
-                  ),
-                  _detailRowPolished('Durum', o.statusLabel),
-                ],
+                ),
               ),
             ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Kapat'),
-            ),
-          ],
         );
       },
     );
@@ -409,209 +611,218 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
   @override
   Widget build(BuildContext context) {
     final o = widget.order;
-    final hasImages = o.imageUrls.isNotEmpty;
 
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Sol durum şeridi
-            Container(
-              width: 6,
-              height: 110,
-              decoration: BoxDecoration(
-                color: widget.highlight ? Colors.redAccent : Colors.green,
-                borderRadius: BorderRadius.circular(6),
-              ),
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeInOut,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
-            const SizedBox(width: 12),
-
-            // Orta içerik
-            Expanded(
-              child: Column(
+          ],
+        ),
+        child: Material(
+          color: Colors.white,
+          elevation: 1,
+          borderRadius: BorderRadius.circular(12),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: () => _showDetails(context),
+            hoverColor: Colors.grey.shade100,
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Başlık ve üst bilgiler
-                  Row(
-                    children: [
-                      Text(
-                        'Sipariş #${o.id}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      if (o.imageUrls.isNotEmpty) ...[
-                        const SizedBox(width: 6),
-                        const Icon(
-                          Icons.image,
-                          size: 18,
-                          color: Colors.black54,
-                        ),
-                      ],
-                      const SizedBox(width: 8),
-                      _StatusChip(status: o.status),
-                      const Spacer(),
-                      _remainingTimeBadge(o.deliveryDatetime),
-                      IconButton(
-                        tooltip: 'Detay',
-                        onPressed: () => _showDetails(context),
-                        icon: const Icon(Icons.info_outline),
-                      ),
-                    ],
+                  // Sol durum şeridi
+                  Container(
+                    width: 6,
+                    height: 120,
+                    decoration: BoxDecoration(
+                      color:
+                          widget.highlight
+                              ? Colors.redAccent
+                              : _statusColor(widget.order.status),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
                   ),
+                  const SizedBox(width: 12),
 
-                  const SizedBox(height: 4),
-
-                  // 👤 Müşteri adı – kart üzerinde görünür
-                  if (o.customerName != null && o.customerName!.isNotEmpty)
-                    Row(
+                  // Orta içerik
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.person,
-                          size: 16,
-                          color: Colors.black54,
+                        // Başlık ve üst bilgiler
+                        Row(
+                          children: [
+                            Text(
+                              'Sipariş #${o.id}',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            if (o.imageUrls.isNotEmpty) ...[
+                              const SizedBox(width: 6),
+                              const Icon(
+                                Icons.image,
+                                size: 18,
+                                color: Colors.black54,
+                              ),
+                            ],
+                            const SizedBox(width: 8),
+                            _StatusChip(status: o.status),
+                            const Spacer(),
+                            _remainingTimeBadge(o.deliveryDatetime),
+                            IconButton(
+                              tooltip: 'Detay',
+                              onPressed: () => _showDetails(context),
+                              icon: const Icon(Icons.info_outline),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 4),
-                        Text(
-                          o.customerName!,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.black87,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    )
-                  else
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.person_outline,
-                          size: 16,
-                          color: Colors.black38,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'Müşteri adı yok',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.black38,
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ],
-                    ),
 
-                  const SizedBox(height: 6),
+                        const SizedBox(height: 4),
 
-                  // Sipariş adı / detayları - always visible and prominent
-                  if (o.details != null && o.details!.isNotEmpty) ...[
-                    Text(
-                      o.details!,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ] else ...[
-                    const Text(
-                      'Sipariş adı belirtilmemiş',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.black54,
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-
-                  // [Sipariş görsel önizleme (thumbnail) KALDIRILDI]
-                  const SizedBox(height: 8),
-
-                  // Alt bilgiler (Teslim tarihi ve kalan tutar)
-                  Row(
-                    children: [
-                      Icon(Icons.schedule, size: 16, color: Colors.black54),
-                      const SizedBox(width: 4),
-                      Text(
-                        o.deliveryDatetimeFormatted ?? '-',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      const Spacer(),
-                      if (o.remainingAmount != null)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 4,
+                        // 👤 Müşteri adı – kart üzerinde görünür
+                        if (o.customerName != null &&
+                            o.customerName!.isNotEmpty)
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.person,
+                                size: 16,
+                                color: Colors.black54,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                o.customerName!,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.black87,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          )
+                        else
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.person_outline,
+                                size: 16,
+                                color: Colors.black38,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                'Müşteri adı yok',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black38,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
                           ),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            'Kalan: ${o.remainingAmount} ₺',
+
+                        const SizedBox(height: 6),
+
+                        // Sipariş adı / detayları
+                        if (o.details != null && o.details!.isNotEmpty) ...[
+                          Text(
+                            o.details!,
                             style: const TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: Colors.green,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
                             ),
                           ),
-                        ),
-                    ],
-                  ),
+                        ] else ...[
+                          const Text(
+                            'Sipariş adı belirtilmemiş',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.black54,
+                              fontStyle: FontStyle.italic,
+                            ),
+                          ),
+                        ],
 
-                  const SizedBox(height: 10),
+                        const SizedBox(height: 8),
 
-                  // Aksiyon
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton.icon(
-                      onPressed: _loading ? null : _markReady,
-                      icon:
-                          _loading
-                              ? const SizedBox(
-                                width: 14,
-                                height: 14,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
+                        // Alt bilgiler (Teslim tarihi ve kalan tutar)
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.schedule,
+                              size: 16,
+                              color: Colors.black54,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              o.deliveryDatetimeFormatted ?? '-',
+                              style: const TextStyle(fontSize: 12),
+                            ),
+                            const Spacer(),
+                            if (o.remainingAmount != null)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 4,
                                 ),
-                              )
-                              : const Icon(Icons.check),
-                      label: const Text('Hazırlandı'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                      ),
+                                decoration: BoxDecoration(
+                                  color: Colors.green.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'Kalan: ${o.remainingAmount} ₺',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.green,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 10),
+
+                        if (widget.showReadyButton)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: ElevatedButton.icon(
+                              onPressed: _loading ? null : _markReady,
+                              icon:
+                                  _loading
+                                      ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                      : const Icon(Icons.check),
+                              label: const Text('Hazırlandı'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Original detail row kept for card use
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 90,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
           ),
-          Expanded(child: Text(value)),
-        ],
+        ),
       ),
     );
   }
@@ -648,6 +859,100 @@ class _OrderCardState extends ConsumerState<_OrderCard> {
   }
 }
 
+Widget _sectionHeader(String text, IconData icon) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.black54),
+        const SizedBox(width: 6),
+        Text(
+          text,
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+        ),
+      ],
+    ),
+  );
+}
+
+bool _isCritical(OrderModel o) {
+  if (o.deliveryDatetime == null) return false;
+  if (o.status == 'ready') return false;
+  final diff = o.deliveryDatetime!.difference(DateTime.now());
+  return diff.inMinutes >= 0 && diff.inHours < 3;
+}
+
+class _HourlyHeatmap extends StatelessWidget {
+  final List<OrderModel> orders;
+  const _HourlyHeatmap({required this.orders});
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final buckets = List<int>.filled(12, 0);
+    for (final o in orders) {
+      final d = o.deliveryDatetime;
+      if (d == null) continue;
+      final diffHours = d.difference(now).inHours;
+      if (diffHours < 0 || diffHours >= buckets.length) continue;
+      buckets[diffHours]++;
+    }
+
+    final maxVal = buckets.fold<int>(0, (p, e) => e > p ? e : p);
+    if (maxVal == 0) {
+      return const Text(
+        'Önümüzdeki 12 saatte teslim yok',
+        style: TextStyle(fontSize: 12, color: Colors.black54),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Önümüzdeki 12 saat dağılımı',
+          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: List.generate(buckets.length, (i) {
+            final val = buckets[i];
+            final height = 6 + (val / maxVal) * 24;
+            final color =
+                val > 0
+                    ? Color.lerp(
+                      Colors.orange.shade200,
+                      Colors.red.shade400,
+                      val / maxVal,
+                    )!
+                    : Colors.grey.shade200;
+            return Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    height: height,
+                    decoration: BoxDecoration(
+                      color: color,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '+${i}h',
+                    style: const TextStyle(fontSize: 10, color: Colors.black54),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ),
+      ],
+    );
+  }
+}
+
 class _EmptyState extends StatelessWidget {
   final String title;
   const _EmptyState({required this.title});
@@ -657,7 +962,17 @@ class _EmptyState extends StatelessWidget {
     return Center(
       child: Padding(
         padding: const EdgeInsets.only(top: 40),
-        child: Text('$title: Sipariş yok'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('$title: Sipariş yok'),
+            const SizedBox(height: 8),
+            const Text(
+              'Filtreyi temizlemeyi deneyin',
+              style: TextStyle(color: Colors.black54, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -705,6 +1020,29 @@ class _ErrorState extends StatelessWidget {
   }
 }
 
+class _StatChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color? color;
+  const _StatChip({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      avatar: Icon(icon, size: 16),
+      label: Text('$label: $value'),
+      backgroundColor: color ?? Colors.grey.shade100,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
 class _StatusChip extends StatelessWidget {
   final String? status;
   const _StatusChip({this.status});
@@ -729,6 +1067,32 @@ class _StatusChip extends StatelessWidget {
       labelStyle: TextStyle(color: color),
       visualDensity: VisualDensity.compact,
     );
+  }
+}
+
+class _TabWithCount extends ConsumerWidget {
+  final String label;
+  final FutureProvider<List<OrderModel>> provider;
+  const _TabWithCount({required this.label, required this.provider});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final count = ref
+        .watch(provider)
+        .maybeWhen(data: (orders) => orders.length, orElse: () => null);
+    final text = count == null ? label : '$label • $count';
+    return Tab(text: text);
+  }
+}
+
+Color _statusColor(String? status) {
+  switch (status) {
+    case 'ready':
+      return Colors.green;
+    case 'preparing':
+      return Colors.orange;
+    default:
+      return Colors.grey;
   }
 }
 
@@ -820,7 +1184,7 @@ class DebugNetworkImage extends StatelessWidget {
     debugPrint('🔁 RESOLVED IMAGE URL: $resolvedUrl');
 
     return Image.network(
-      resolvedUrl,
+      rawUrl,
       fit: BoxFit.cover,
       errorBuilder: (_, e, __) {
         debugPrint('❌ IMAGE LOAD ERROR: $e');

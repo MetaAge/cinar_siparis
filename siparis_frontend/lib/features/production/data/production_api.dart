@@ -38,6 +38,17 @@ class ProductionApi {
         .toList();
   }
 
+  Future<List<OrderModel>> history() async {
+    final res = await dio.get('/production/orders/history');
+    if (res.statusCode != 200) {
+      throw Exception(_msg(res.data) ?? 'Geçmiş siparişler alınamadı');
+    }
+    final list = (res.data as List).cast<dynamic>();
+    return list
+        .map((e) => OrderModel.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
   Future<void> markReady(int id) async {
     final res = await dio.patch('/orders/$id/ready');
     if (res.statusCode != 200) {

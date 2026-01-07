@@ -19,6 +19,7 @@ Route::middleware(['auth:sanctum', 'role:production,admin,cashier'])->group(func
     Route::get('/production/orders/today', [ProductionOrderController::class, 'today']);
     Route::get('/production/orders/late', [ProductionOrderController::class, 'late']);
     Route::get('/production/orders/upcoming', [ProductionOrderController::class, 'upcoming']);
+    Route::get('/production/orders/history', [ProductionOrderController::class, 'history']);
 
     Route::middleware(['role:admin'])->group(function () {
     Route::get('/admin/dashboard', [AdminDashboardController::class, 'index']);

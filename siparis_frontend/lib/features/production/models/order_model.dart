@@ -5,6 +5,7 @@ class OrderModel {
 
   final String? customerName;
   final String? customerPhone;
+  final String? customerAddress;
   final String? details;
   final List<String> imageUrls;
 
@@ -19,6 +20,7 @@ class OrderModel {
     required this.id,
     this.customerName,
     this.customerPhone,
+    this.customerAddress,
     this.details,
     required this.imageUrls,
     this.orderTotal,
@@ -50,6 +52,7 @@ class OrderModel {
 
       customerName: json['customer_name'] as String?,
       customerPhone: json['customer_phone'] as String?,
+      customerAddress: json['customer_address'] as String?,
       details: json['order_details'] as String?,
       imageUrls: urls,
 

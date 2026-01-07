@@ -175,7 +175,7 @@ class DebugNetworkImage extends StatelessWidget {
     debugPrint('🔁 RESOLVED IMAGE URL: $resolvedUrl');
 
     return Image.network(
-      resolvedUrl,
+      rawUrl,
       fit: BoxFit.cover,
       errorBuilder: (_, e, __) {
         debugPrint('❌ IMAGE LOAD ERROR: $e');

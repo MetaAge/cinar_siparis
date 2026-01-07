@@ -24,6 +24,11 @@ final productionUpcomingProvider = FutureProvider.autoDispose<List<OrderModel>>(
     return ref.watch(productionApiProvider).upcoming();
   },
 );
+final productionHistoryProvider = FutureProvider.autoDispose<List<OrderModel>>((
+  ref,
+) async {
+  return ref.watch(productionApiProvider).history();
+});
 
 final markReadyProvider = FutureProvider.family<void, int>((ref, id) async {
   await ref.watch(productionApiProvider).markReady(id);

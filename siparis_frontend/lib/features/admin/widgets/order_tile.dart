@@ -27,7 +27,7 @@ class OrderTile extends StatelessWidget {
             ),
           ],
         ),
-        trailing: Text('${o['remaining_amount']} ₺'),
+        trailing: Text('${o['order_total']} ₺'),
       ),
     );
   }

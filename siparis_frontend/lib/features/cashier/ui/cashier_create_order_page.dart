@@ -28,6 +28,7 @@ class _CashierCreateOrderPageState
   DateTime? _delivery;
   bool _saving = false;
   String? _error;
+  final int _detailsMaxLength = 320;
 
   @override
   void dispose() {
@@ -68,6 +69,38 @@ class _CashierCreateOrderPageState
         time.minute,
       );
     });
+  }
+
+  void _setDeliveryPreset(DateTime dt) {
+    setState(() => _delivery = dt);
+  }
+
+  void _setDeliveryToday() {
+    final now = DateTime.now();
+    _setDeliveryPreset(DateTime(now.year, now.month, now.day, 18, 0));
+  }
+
+  void _setDeliveryTomorrow() {
+    final now = DateTime.now().add(const Duration(days: 1));
+    _setDeliveryPreset(DateTime(now.year, now.month, now.day, 12, 0));
+  }
+
+  void _setDeliveryWeekend() {
+    final now = DateTime.now();
+    final daysToSaturday = (6 - now.weekday) % 7;
+    final saturday = now.add(Duration(days: daysToSaturday));
+    _setDeliveryPreset(DateTime(saturday.year, saturday.month, saturday.day, 12));
+  }
+
+  void _setDeliveryNext3Hours() {
+    final dt = DateTime.now().add(const Duration(hours: 3));
+    _setDeliveryPreset(dt);
+  }
+
+  void _setDepositPercent(int percent) {
+    final total = int.tryParse(_total.text.trim()) ?? 0;
+    final deposit = ((total * percent) / 100).round();
+    setState(() => _deposit.text = deposit.toString());
   }
 
   Future<void> _uploadImage() async {
@@ -192,11 +225,67 @@ class _CashierCreateOrderPageState
       return Card(
         margin: const EdgeInsets.only(bottom: 16),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        color: Colors.grey.shade50,
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [title, const SizedBox(height: 12), child],
+          ),
+        ),
+      );
+    }
+
+    Widget summaryCard() {
+      final chips = <Widget>[];
+      if (_customerName.text.trim().isNotEmpty) {
+        chips.add(_InfoChip(label: 'Müşteri', value: _customerName.text.trim()));
+      }
+      if (_customerPhone.text.trim().isNotEmpty) {
+        chips.add(_InfoChip(label: 'Telefon', value: _customerPhone.text.trim()));
+      }
+      if (_delivery != null) {
+        chips.add(
+          _InfoChip(
+            label: 'Teslim',
+            value: DateFormat('dd.MM HH:mm').format(_delivery!),
+            icon: Icons.calendar_month,
+          ),
+        );
+      }
+      final totalVal = int.tryParse(_total.text.trim()) ?? 0;
+      final depositVal = int.tryParse(_deposit.text.trim()) ?? 0;
+      if (totalVal > 0) {
+        chips.add(_InfoChip(label: 'Toplam', value: '$totalVal ₺', icon: Icons.savings));
+      }
+      if (depositVal > 0) {
+        chips.add(_InfoChip(label: 'Kapora', value: '$depositVal ₺', icon: Icons.payments));
+      }
+
+      return Card(
+        margin: const EdgeInsets.only(bottom: 16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Özet',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+              const SizedBox(height: 10),
+              chips.isEmpty
+                  ? const Text(
+                      'Bilgileri girdikçe özet burada görünecek',
+                      style: TextStyle(color: Colors.black54, fontSize: 13),
+                    )
+                  : Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: chips,
+                    ),
+            ],
           ),
         ),
       );
@@ -222,7 +311,7 @@ class _CashierCreateOrderPageState
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1000),
+          constraints: const BoxConstraints(maxWidth: 840),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final isWide = constraints.maxWidth >= 900;
@@ -249,6 +338,7 @@ class _CashierCreateOrderPageState
                     Text(_error!, style: const TextStyle(color: Colors.red)),
                     const SizedBox(height: 12),
                   ],
+                  summaryCard(),
 
                   // 1️⃣ MÜŞTERİ BİLGİLERİ
                   sectionCard(
@@ -257,8 +347,10 @@ class _CashierCreateOrderPageState
                       TextField(
                         controller: _customerName,
                         decoration: const InputDecoration(
-                          labelText: 'Müşteri Adı',
+                          labelText: 'Müşteri Adı *',
+                          helperText: 'Zorunlu alan',
                         ),
+                        onChanged: (_) => setState(() {}),
                       ),
                       TextField(
                         controller: _customerPhone,
@@ -268,9 +360,11 @@ class _CashierCreateOrderPageState
                           TrPhoneFormatter(),
                         ],
                         decoration: const InputDecoration(
-                          labelText: 'Telefon',
+                          labelText: 'Telefon *',
                           hintText: '05XX XXX XX XX',
+                          helperText: 'Zorunlu alan',
                         ),
+                        onChanged: (_) => setState(() {}),
                       ),
                     ),
                   ),
@@ -280,10 +374,13 @@ class _CashierCreateOrderPageState
                     title: sectionTitle(Icons.list_alt, 'Sipariş Detayı'),
                     child: TextField(
                       controller: _details,
-                      maxLines: 4,
+                      maxLines: 5,
+                      maxLength: _detailsMaxLength,
                       decoration: const InputDecoration(
-                        labelText: 'Sipariş Detayı',
+                        labelText: 'Sipariş Detayı *',
+                        helperText: 'Zorunlu alan · Ne üretilecek, ölçü/beden vs.',
                       ),
+                      onChanged: (_) => setState(() {}),
                     ),
                   ),
 
@@ -295,15 +392,37 @@ class _CashierCreateOrderPageState
                         controller: _total,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
-                          labelText: 'Toplam (₺)',
+                          labelText: 'Toplam (₺) *',
+                          helperText: 'Zorunlu alan',
                         ),
+                        onChanged: (_) => setState(() {}),
                       ),
                       TextField(
                         controller: _deposit,
                         keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           labelText: 'Kapora (₺)',
+                          helperText: 'İstersen alttan hızlı % seç',
+                          suffix: Wrap(
+                            spacing: 6,
+                            children: [
+                              _MiniChip(text: '%0', onTap: () => _setDepositPercent(0)),
+                              _MiniChip(
+                                text: '%25',
+                                onTap: () => _setDepositPercent(25),
+                              ),
+                              _MiniChip(
+                                text: '%50',
+                                onTap: () => _setDepositPercent(50),
+                              ),
+                              _MiniChip(
+                                text: '%100',
+                                onTap: () => _setDepositPercent(100),
+                              ),
+                            ],
+                          ),
                         ),
+                        onChanged: (_) => setState(() {}),
                       ),
                     ),
                   ),
@@ -314,14 +433,42 @@ class _CashierCreateOrderPageState
                       Icons.calendar_month,
                       'Teslim Tarihi / Saati',
                     ),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(deliveryText),
-                      trailing: ElevatedButton.icon(
-                        onPressed: _pickDelivery,
-                        icon: const Icon(Icons.calendar_month),
-                        label: const Text('Seç'),
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(deliveryText),
+                          trailing: ElevatedButton.icon(
+                            onPressed: _pickDelivery,
+                            icon: const Icon(Icons.calendar_month),
+                            label: const Text('Seç'),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            ActionChip(
+                              label: const Text('Bugün 18:00'),
+                              onPressed: _setDeliveryToday,
+                            ),
+                            ActionChip(
+                              label: const Text('Yarın 12:00'),
+                              onPressed: _setDeliveryTomorrow,
+                            ),
+                            ActionChip(
+                              label: const Text('Hafta sonu'),
+                              onPressed: _setDeliveryWeekend,
+                            ),
+                            ActionChip(
+                              label: const Text('+3 saat'),
+                              onPressed: _setDeliveryNext3Hours,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
 
@@ -335,7 +482,9 @@ class _CashierCreateOrderPageState
                           controller: _imageUrl,
                           decoration: const InputDecoration(
                             labelText: 'Görsel URL (opsiyonel)',
+                            helperText: 'Yüklersen önizleme gözükecek',
                           ),
+                          onChanged: (_) => setState(() {}),
                         ),
                         const SizedBox(height: 12),
                         Row(
@@ -348,16 +497,16 @@ class _CashierCreateOrderPageState
                             const SizedBox(width: 16),
                             if (_imageUrl.text.isNotEmpty)
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(10),
                                 child: Image.network(
                                   _imageUrl.text,
-                                  width: 72,
-                                  height: 72,
+                                  width: 80,
+                                  height: 80,
                                   fit: BoxFit.cover,
                                   errorBuilder:
                                       (_, __, ___) => Container(
-                                        width: 72,
-                                        height: 72,
+                                        width: 80,
+                                        height: 80,
                                         color: Colors.grey.shade200,
                                         child: const Icon(
                                           Icons.broken_image,
@@ -380,6 +529,72 @@ class _CashierCreateOrderPageState
               );
             },
           ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+          child: Row(
+            children: [
+              OutlinedButton(
+                onPressed: _saving ? null : () => Navigator.pop(context),
+                child: const Text('İptal'),
+              ),
+              const Spacer(),
+              FilledButton.icon(
+                onPressed: _saving ? null : _save,
+                icon:
+                    _saving
+                        ? const SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : const Icon(Icons.save),
+                label: const Text('Kaydet'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoChip extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData? icon;
+  const _InfoChip({required this.label, required this.value, this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Chip(
+      avatar: icon != null ? Icon(icon, size: 16) : null,
+      label: Text('$label: $value'),
+      visualDensity: VisualDensity.compact,
+    );
+  }
+}
+
+class _MiniChip extends StatelessWidget {
+  final String text;
+  final VoidCallback onTap;
+  const _MiniChip({required this.text, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          text,
+          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
       ),
     );
