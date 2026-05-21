@@ -13,6 +13,7 @@ use App\Http\Controllers\DeviceTokenController;
 use App\Http\Controllers\DmWebhookController;
 use App\Http\Controllers\AdminDmLeadController;
 use App\Http\Controllers\AdminDmLeadOrderDraftController;
+use App\Http\Controllers\WhatsAppWebhookController;
 use Illuminate\Http\Request;
 
 Route::options('/{any}', function (Request $request) {
@@ -21,6 +22,8 @@ Route::options('/{any}', function (Request $request) {
 
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/dm/webhook', [DmWebhookController::class, 'store']);
+Route::get('/dm/webhook/whatsapp', [WhatsAppWebhookController::class, 'verify']);
+Route::post('/dm/webhook/whatsapp', [WhatsAppWebhookController::class, 'receive']);
 
 Route::middleware(['auth:sanctum', 'role:production,admin,cashier'])->group(function () {
     
