@@ -56,9 +56,8 @@ class CashierOrderController extends Controller
                 'created_by'        => $request->user()->id,
             ]);
         });
-        // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
-        //OrderNotificationService::newOrder($order);
-        
+        // 🔔 BİLDİRİM
+        OrderNotificationService::newOrder($order);
 
         return response()->json([
             'message' => 'Sipariş oluşturuldu',
@@ -118,9 +117,8 @@ class CashierOrderController extends Controller
             'image_url'         => $imageUrl,
         ]);
     });
-    // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
-   //OrderNotificationService::updatedOrder($order);
-    
+    // 🔔 BİLDİRİM
+        OrderNotificationService::updatedOrder($order);
 
     return response()->json(['message' => 'Güncellendi', 'order' => $order->fresh()]);
 }

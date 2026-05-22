@@ -39,10 +39,8 @@ class CashierController extends Controller
             'remaining_amount' => 0,
             'status' => 'paid',
         ]);
-        // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
-        app()->terminating(function () use ($order) {
-            try { OrderNotificationService::completedOrder($order); } catch (\Throwable $e) { \Log::error('FCM hata: '.$e->getMessage()); }
-        });
+        // 🔔 BİLDİRİM
+        OrderNotificationService::completedOrder($order);
 
         return response()->json([
             'message' => 'Ödeme alındı',
