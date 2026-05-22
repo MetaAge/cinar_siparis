@@ -29,9 +29,9 @@ class CashierController extends Controller
      */
     public function markPaid(Order $order)
     {
-        if ($order->remaining_amount <= 0) {
+        if (in_array($order->status, ['paid', 'delivered'])) {
             return response()->json([
-                'message' => 'Bu sipariş zaten ödenmiş'
+                'message' => 'Bu sipariş zaten tamamlanmış'
             ], 400);
         }
 
@@ -40,10 +40,10 @@ class CashierController extends Controller
             'status' => 'paid',
         ]);
         // 🔔 BİLDİRİM
-        OrderNotificationService::completedOrder($order);
+        //OrderNotificationService::completedOrder($order);
 
         return response()->json([
-            'message' => 'Ödeme alındı',
+            'message' => 'Sipariş tamamlandı',
             'order' => $order
         ]);
     }
