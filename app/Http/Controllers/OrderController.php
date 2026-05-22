@@ -75,7 +75,7 @@ if ($imageUrl && str_contains($imageUrl, 'images.unsplash.com')) {
         ]);
 
         // 🔔 BİLDİRİM
-        OrderNotificationService::readyOrder($order);
+        //OrderNotificationService::readyOrder($order);
 
         return response()->json([
             'message' => 'Sipariş hazırlandı olarak işaretlendi',
