@@ -120,9 +120,7 @@ class CashierOrderController extends Controller
     });
     // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
    //OrderNotificationService::updatedOrder($order);
-    //app()->terminating(function () use ($order) {
-        //    try { OrderNotificationService::updatedOrder($order); } catch (\Throwable $e) { \Log::error('FCM hata: '.$e->getMessage()); }
-        //});
+    
 
     return response()->json(['message' => 'Güncellendi', 'order' => $order->fresh()]);
 }
