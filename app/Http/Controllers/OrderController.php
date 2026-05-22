@@ -74,8 +74,8 @@ if ($imageUrl && str_contains($imageUrl, 'images.unsplash.com')) {
             'status' => 'ready',
         ]);
 
-        // 🔔 BİLDİRİM
-        OrderNotificationService::readyOrder($order);
+        // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
+        defer(fn () => OrderNotificationService::readyOrder($order));
 
         return response()->json([
             'message' => 'Sipariş hazırlandı olarak işaretlendi',

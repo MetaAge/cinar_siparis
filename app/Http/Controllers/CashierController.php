@@ -39,8 +39,8 @@ class CashierController extends Controller
             'remaining_amount' => 0,
             'status' => 'paid',
         ]);
-        // 🔔 BİLDİRİM
-        OrderNotificationService::completedOrder($order);
+        // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
+        defer(fn () => OrderNotificationService::completedOrder($order));
 
         return response()->json([
             'message' => 'Ödeme alındı',
