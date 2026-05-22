@@ -75,9 +75,8 @@ if ($imageUrl && str_contains($imageUrl, 'images.unsplash.com')) {
         ]);
 
         // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
-        app()->terminating(function () use ($order) {
-            try { OrderNotificationService::readyOrder($order); } catch (\Throwable $e) { \Log::error('FCM hata: '.$e->getMessage()); }
-        });
+        //OrderNotificationService::readyOrder($order);
+        
 
         return response()->json([
             'message' => 'Sipariş hazırlandı olarak işaretlendi',
