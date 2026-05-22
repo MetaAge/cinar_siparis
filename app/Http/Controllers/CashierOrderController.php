@@ -57,7 +57,9 @@ class CashierOrderController extends Controller
             ]);
         });
         // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
-        defer(fn () => OrderNotificationService::newOrder($order));
+        app()->terminating(function () use ($order) {
+            try { OrderNotificationService::newOrder($order); } catch (\Throwable $e) { \Log::error('FCM hata: '.$e->getMessage()); }
+        });
 
         return response()->json([
             'message' => 'Sipariş oluşturuldu',
@@ -118,7 +120,9 @@ class CashierOrderController extends Controller
         ]);
     });
     // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
-        defer(fn () => OrderNotificationService::updatedOrder($order));
+        app()->terminating(function () use ($order) {
+            try { OrderNotificationService::updatedOrder($order); } catch (\Throwable $e) { \Log::error('FCM hata: '.$e->getMessage()); }
+        });
 
     return response()->json(['message' => 'Güncellendi', 'order' => $order->fresh()]);
 }

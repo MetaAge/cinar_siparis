@@ -40,7 +40,9 @@ class CashierController extends Controller
             'status' => 'paid',
         ]);
         // 🔔 BİLDİRİM — yanıt döndükten SONRA gönder
-        defer(fn () => OrderNotificationService::completedOrder($order));
+        app()->terminating(function () use ($order) {
+            try { OrderNotificationService::completedOrder($order); } catch (\Throwable $e) { \Log::error('FCM hata: '.$e->getMessage()); }
+        });
 
         return response()->json([
             'message' => 'Ödeme alındı',
